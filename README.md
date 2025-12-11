@@ -21,8 +21,8 @@ A high-performance analytics system built with FastAPI, Redis Streams, and React
 
 ```mermaid
 graph TD
-    Client[Client / Mock Gen] -->|POST /ingest| API[FastAPI Backend]
-    Client -->|GET /metrics| API
+    MockGen[Mock Data Generator] -->|POST /ingest| API[FastAPI Backend]
+    Frontend["Frontend (React/Vite)"] -->|GET /metrics| API
     
     subgraph Redis
         Stream["Redis Stream (events_stream)"]
