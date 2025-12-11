@@ -25,9 +25,9 @@ graph TD
     Client -->|GET /metrics| API
     
     subgraph Redis
-        Stream[Redis Stream (events_stream)]
-        Stats[Redis Stats (ZSETs & Hashes)]
-        DLQ[DLQ Stream (events_dlq)]
+        Stream["Redis Stream (events_stream)"]
+        Stats["Redis Stats (ZSETs & Hashes)"]
+        DLQ["DLQ Stream (events_dlq)"]
     end
     
     API -->|XADD| Stream
