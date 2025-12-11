@@ -1,0 +1,100 @@
+version: '3.3'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: analytics_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - analytics_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: analytics_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=http://localhost:5173
+    depends_on:
+      - redis
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - analytics_net
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: analytics_worker
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - backend
+    command: python -m app.worker
+    ports:
+      - "8001:8001"
+    networks:
+      - analytics_net
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: node:18-alpine
+    container_name: analytics_frontend
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host"
+    networks:
+      - analytics_net
+
+  prometheus:
+    image: prom/prometheus
+    container_name: analytics_prometheus
+    ports:
+      - "9094:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - analytics_net
+
+  grafana:
+    image: grafana/grafana
+    container_name: analytics_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - analytics_net
+
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: analytics_redis_exporter
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - analytics_net
+
+networks:
+  analytics_net:
+    driver: bridge
